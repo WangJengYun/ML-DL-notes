@@ -1,5 +1,5 @@
 ---
-tags: Machine Learning
+tags: Boosting,Machine Learning
 ---
 LightGBM
 ===
@@ -82,4 +82,11 @@ LightGBM則是採用leaf-wise生長策略，每次分割時都會尋找增益最
 此演算法的計算量為$O(\#feature)$，然而當特徵數很大時，仍然效率不高，為了改善這個情況，LightGBM提供高有效率且不需要建立圖，就是根據非零的各數進行排序，就是類似於圖節點的度排序，因此更多非零值導致衝突，這只是替代上述的演算法中排序策略而已。
 
 ### Merge Exclusive Features
+我們已經將features根據衝突值進行分組成bundle，接這進行合併。然而為了保持bundle內的features的互斥，則是將features的範圍擴大，如下為示意圖，原本feaute1範圍為1至4與feature2範圍1至2，我們需要衍生新的特徵將這兩個數值都能考慮，則將新的特徵範圍擴展成1至6，然而其中5和6是對應feautre的1與2。
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Machine%20Learning/images/Lightgbm/Merge%20Exclusive%20Features_1.PNG?raw=true)
+演算法過程如下:
+1. 計算在bundle的每個特徵的bin的數量(或者偏移量)，增加至totalbin，計算紀錄累加的totalbin為binRanges。
+2. 建立新的bin，且bin的長度為資料筆數，起始值都設為0
+3. 對每筆資料與特徵進行迭代，如果值為0則不會對新的bin進行更新，非0則是原始特徵的bin增加相對應的偏移量。
 
+採用了EFB方法之後，從原本的特徵數減少至bundle個數，進而有小減少數據大小，且可以避免計算特徵內0值，也可以優化histogram-based演算法，可以直接忽略特徵內的0值，再掃描資料的成本也會從$O(\#data)$至$O(\# non\_zero\_data)$，整理來說提高模型的訓練速度。
