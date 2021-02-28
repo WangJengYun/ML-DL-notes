@@ -32,5 +32,15 @@ Bert的機制中，以非監督式學習方式對未標籤資料進行訓練語�
 
 ![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/NLP/Bert/Bert4.png?raw=true)
 
-## Fine-tuning Bert 
+## Fine-tuning Bert
+Bert在執行下游的預測任務時，會採用預訓練好的模型參數，這樣就可以已少量的資料就可以達到不錯的預測精準度，而且我們採與句子A與句子B進行訓練，之後再Fine-tuning時，可以接受不同的pair任務，如下:
+1. 改敘或換句話說的兩個句子
+2. 從推論去辨認的蘊含關係
+3. 問答關係
+4. 文本分類(Text-X)或者句子標記(命名實體辨認)
+
 ![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/NLP/Bert/Bert5.png?raw=true)
+#### Bert for feature extraction 
+Fine-tuning不只是運用在各個場景上，也可以建立各個情境的word embeeding，我們以命名實體辨認舉例，我們該用哪一層的word embeeding進行預測呢?我們一下張圖來看，是做不同的實驗將不同層的word embeeding進行聚集(平均或加總等等)，且根據我們目的評估F1 score，你會發現用整個模型所的到96.4，而運用不同方的聚集相對較低，但可以發現哪一方式會比較靠近96.4，所富含資訊相對豐富。
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/NLP/Bert/Bert6.png?raw=true)
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/NLP/Bert/Bert7.png?raw=true)
