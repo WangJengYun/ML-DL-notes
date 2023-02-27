@@ -11,3 +11,18 @@ SAINT的全名為「self-Attention and Intersample Attention Transformer」，�
 
 最後此方法針對semi-supervised problem，採用self-supervied contrastive pre-training來增強訓練的結果。
 ## Self-Attention and Intersample Attention Transformer (SAINT)
+Suppose $D=\{x_i,y_i\}^m_{i=1}$ is a tabular dataset with $m$ points, where each $x_i$ is an $n$-dimensional feature vector, and $y_i$ is a label or target variable. Similar to BERT, we append a [CLS] token with a learned embedding to each data sample. Let $x_i = [[CLS], f_i^{\{1\}}, f_i^{\{2\}}, f_i^{\{3\}},..., f_i^{\{n\}}]$ be a single data-point with categorical or continuous features $f_i^{\{j\}}$, and Let $E$ be embedding layer that embeds each feature into a $d$-dimensional space. Note that $E$ use different embedding functions for different features. For a given $x_i \in R^{(n+1)}$, we get $E(x_i) \in R^{(n+1 \times d)}$.
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Tabular_Data/SAINT/SAINT.png?raw=true)
+
+### Encoding the Data 
+在語言模型當中，所有的token的embeding過程都是相同，但是在tabular的領域中，不同的特徵會來自不同的分配，故需要異質/不同的Eembeddings，另外針對連續型變數，格外透過fully-connected layer with a ReLU nonlinearity進行映射，從$1$維度空間到$d$維度空間。
+### Architecture 
+由上圖可知，SAINT是由$L$個相同階層所組成，每個階層可分為「self-attention transformer block」與「intersample attention transformer block」，其中self-attention是跟2017年google所發行「Attention is all you need」所使用方法是相同的，第一階層為multi-head self-attention layer(MSA)，接著會連接兩個fully-connected feed-forward(FF) layer with a GELU non-lineariry，其中每個layer都會有skip-connection and layer normalization，另外intersample attention部分是與self-attention相同，只是其中multi-head self-attention layer會是由intersample attention layer(MISA)所替換，此部分會在下個小節說明。
+
+The SAINT pipeline, with a single stage($L$=1) and a batch of $b$ inputs, is described by the following equations. We denote multi-head self-attention by MSA, multi-head intersample attention by MISA, feed-forward layers by FF, and layer norm by LN:
+$$\begin{equation} z_i^{(1)}=LN(MSA(E(x_i)))+E(x_i) \end{equation}$$
+$$\begin{equation} z_i^{(2)}=LN(FF_1(z_i^{(1)}))+z_i^{(1)} \end{equation}$$
+$$\begin{equation} z_i^{(3)}=LN(MISA(z_i^{(2)}\}^{b}_{i=1}))+z_i^{(2)} \end{equation}$$
+$$\begin{equation} r_i=LN(FF_2(z_i^{(3)}))+z_i^{(3)} \end{equation}$$
+where $r_i$ is SAINT's contextual representation output corresponding to data  point $x_i$. This contextual embedding can be used in downstream tasks such as self-supervision or classification.
+### Intersmaple attention
