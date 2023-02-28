@@ -25,4 +25,35 @@ $$\begin{equation} z_i^{(2)}=LN(FF_1(z_i^{(1)}))+z_i^{(1)} \end{equation}$$
 $$\begin{equation} z_i^{(3)}=LN(MISA(z_i^{(2)}\}^{b}_{i=1}))+z_i^{(2)} \end{equation}$$
 $$\begin{equation} r_i=LN(FF_2(z_i^{(3)}))+z_i^{(3)} \end{equation}$$
 where $r_i$ is SAINT's contextual representation output corresponding to data  point $x_i$. This contextual embedding can be used in downstream tasks such as self-supervision or classification.
-### Intersmaple attention
+### Intersample attention
+接著與大家介紹Intersample attention，以每次訓練的batch為主，橫跨不同資料點進行attention計算，首先會先將每個特徵的embedding進行串聯合併，並以不同的資料點進行attention計算，能夠藉由檢視其他資料點來改善資料點的訓練表現，另外若特徵有包含遺失值及雜訊，Intersample attention可以從同個batch中其他資料點參考對應的特徵，能夠讓模型可以精準學習。
+
+如下圖表示，可以透過Intersample attention機制連結不同資料點的資訊，另外作者說明在multi-head中，針對$q$,$k$,$v$不是採用$d$-dimension，而是將這些映射到$\frac{d}{h}$，其中$h$為head的個數，最後我們串連所有的更新向量，得到長度為$d$的向量$v_i$。
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Tabular_Data/SAINT/SAINT_2.png?raw=true)
+
+最後作者有提供pseudo-code給大家參考，如下：
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Tabular_Data/SAINT/SAINT_3.png?raw=true)
+
+### Self Supervised pre-training
+Contrastive Learning之前在影像與文字有很好的應用，進幾年來開始用運用在tabuler data上，主要概念就是訓練一個降維的網路，並且設計出Contrasive Loss，使得相似的樣本降維後在空間上越近越好，差異大的樣本則盡可能的拉開距離。在上述的訓練過程中，模型會對資料的特徵有所歸納與認識，才能將原始數據去蕪存菁。
+#### Generating augmentations
+標準的Contrastive Learning其實較難運用在tabular data，VIME的作者提供mixup方法運用在non-embeded space視為data augmentation，但是對於連續行變數會是有限制，主本論文的做作者則是先透過CutMix方法在原始變數上，然後再Mixup方法應用在embedding space，這兩格方法結合起來可以達到有效的self-supervision任務上，數學定義如下：
+
+Assume that only $l$ of $m$ data points are labeled. We denote the embedding layer by $E$, the SAINT network by $S$ and 2 projection heads as $g_1(.)$ and $g_2(.)$. The CutMix augmentation probability is denoted $p_{cutmix}$ and the mixup parameter is $\alpha$. Given point $x_i$, the original embedding is $p_i=E(x_i)$, while the augmented representation is generated as follows:
+$$\begin{equation} x^{'}_i = x_i\bigodot m + x_a\bigodot(1-m)\end{equation}$$
+$$\begin{equation} p^{'}_i = \alpha * E(x^{'}_i)+(1-\alpha)*E(x^{'}_b)\end{equation}$$
+where equation 5 is that cutmix in raw data space and equation 6 is that mixup in embedding space and $x_a$, $x_b$ are random samples from the current batch. $x^{'}_b$ is the CutMix version of $x_b$, $m$ is the binary mask vector sampled from a Bernoulli distribution with probability $p_{cutmix}$ and $\alpha$ is the mixup parameter. 
+
+Note that we first obtain a CutMix version of every data point in a batch by randomly selecting a partner to mix with. We then embed the samples and choose news partners before performing mixup 
+#### SAINT and projection heads
+現在我們很清楚知道原始的 $p_i$ 和混合 $p^{'}_i$ embeddings，透過SAINT及project heads $g_1(.)$ and $g_2(.)$，是由MLP(one hidden layer and a ReLU)所組成的，在計算contractive loss之前可以減少維度，的確是可以改善訓練結果。
+#### Loss functions 
+在loss部分可以拆分成兩塊，如下：
+1. Contrastive loss : 主要是想要相同資料點($z_i$和$z^{'}_i$)越靠近越好，反之鼓勵不同資料($z_i$ and $z_j$, $i \not = j$)點越遠越好，故這部分我們採用InfoNCE
+2. Denoising Loss : 我們試著從雜訊的資料預測原始的資料樣本，假設我們給定 $r^{'}_i$及重構$x_i^{''}$，我們期望可以最小化原始與重構間的差異
+
+The combined pre-training loss is 
+$$\begin{equation} L_{pre-training}=-\sum^m_{i=1}log\frac{exp(z_i \cdot z_i^{'}/\tau)}{\sum^m_{k=1}exp(z_i \cdot z_k^{'}/\tau)}+\lambda_{pt}\sum^m_{i=1}\sum^n_{j=1}[L_i(MLP_j(r^{'}_i, x_i))] \end{equation}$$
+where $r_i=S(p_i)$,  $r_i^{'}=S(p_i^{'})$, $z_i=g_1(r_i)$, $z_i^{'}=g_2(r_i^{'})$. $L_j$ is cross-entropy loss or mean squared error depending on the $j^{th}$ feature being categorical or continuous. Each $MLP_j$ is single hidden layer perceptron with a ReLU non-linearity. There are $n$ in number. one for each input feature. $\lambda_{pt}$ is a hyper-parameter and $\tau$ is temperature parameter and both of these are tuned using validation data. 
+### finetuning 
+透過SAINT進行無標註的資料的預訓練，接著可進行$l$個有標註資料的finetune。整理來說，對於特定$x_i$，可以學習相對應的contextual embedding $r_i$，在最後預測步驟，我們可以透過 embedding得到[CLS] token，接著透過簡單MLP得到最後的產出，我們就可以透過cross-entropy來衡量類別任務;透過mean squared error來衡量回歸任務
