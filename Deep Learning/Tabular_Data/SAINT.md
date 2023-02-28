@@ -12,7 +12,7 @@ SAINT的全名為「self-Attention and Intersample Attention Transformer」，�
 最後此方法針對semi-supervised problem，採用self-supervied contrastive pre-training來增強訓練的結果。
 ## Self-Attention and Intersample Attention Transformer (SAINT)
 Suppose $D=\{x_i,y_i\}^m_{i=1}$ is a tabular dataset with $m$ points, where each $x_i$ is an $n$-dimensional feature vector, and $y_i$ is a label or target variable. Similar to BERT, we append a [CLS] token with a learned embedding to each data sample. Let $x_i = [[CLS], f_i^{\{1\}}, f_i^{\{2\}}, f_i^{\{3\}},..., f_i^{\{n\}}]$ be a single data-point with categorical or continuous features $f_i^{\{j\}}$, and Let $E$ be embedding layer that embeds each feature into a $d$-dimensional space. Note that $E$ use different embedding functions for different features. For a given $x_i \in R^{(n+1)}$, we get $E(x_i) \in R^{(n+1 \times d)}$.
-![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Tabular_Data/SAINT/SAINT.png?raw=true)
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Tabular_Data/SAINT/SAINT_1.png?raw=true)
 
 ### Encoding the Data 
 在語言模型當中，所有的token的embeding過程都是相同，但是在tabular的領域中，不同的特徵會來自不同的分配，故需要異質/不同的Eembeddings，另外針對連續型變數，格外透過fully-connected layer with a ReLU nonlinearity進行映射，從$1$維度空間到$d$維度空間。
