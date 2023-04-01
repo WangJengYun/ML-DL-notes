@@ -53,3 +53,4 @@ over a large corpus $\chi$ of raw text.
 (3) ELECTRA:相關模型架構，可參考上一小節的說明．
 
 我們可以由下圖發現，可見原始ELECTRA的結果是最好的，其次是Adversarial ELECTRA，但是還是無法超越原始ELECTRA，其原因作者推測試強化學習的較差的樣本效率及在生成器產生low-entropy輸出分配，其大部分的機率是在單一個token上，則在生成器生成的樣本較缺乏多樣性，另外對於Two-Stage ELECTRA隨然比較差但還是比bert表現較好。
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/NLP/ELECTRA/ELECTRA_5.png?raw=true)
