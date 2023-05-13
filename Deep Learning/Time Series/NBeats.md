@@ -11,7 +11,7 @@ Nbeats的全名為「Neural Basis Expansion Analysis For Interpretable Time Seri
 接著後續我們針對$l_{th}$ block進行說明，在$l_{th}$ block中，$x_l$ 表示所有此block的輸入，是我們所觀察的過去時間序列，另外輸出為$H$個預測值，我們針對$x$的長度可以是$2H$至$7H$之間，另外其輸入$x_l$是上一個block輸入及輸出的殘差值，每個block都會有兩個輸出，1. $\hat{y_l}$表示為$H$長度的forward預測值 2. $\hat{x_l}$表示$x_l$的最好估計值，可稱為$backward$的預測值，最後我們可以使用限制函數空間近似一些patterns或者signals。
 
 ### Basic Block
-在block內部包含兩個部分，第一個是「mutiple-layer FC network with Relu nonlinearities」，其輸出/預測基本的擴張係數「basis expansion cofficients」為forwoard的$\theta^f_l$及backward的$\theta^b_l$，第二個是backward $g^b_l$ 及 forward $g^f_l$兩個函示，主要接收各別的$\theta^f_l$及$\theta^b_l$擴張係數，藉由這兩個基本函式映射且產生$\hat{x_l}$及$\hat{y_l}$，其相對應的數學函示如下：
+在block內部包含兩個部分，第一個是「mutiple-layer FC network with Relu nonlinearities」，其輸出/預測基本的擴張係數「basis expansion cofficients」為forwoard的$\theta^f_l$及backward的$\theta^b_l$，第二個是backward $g^b_l$ 及 forward $g^f_l$兩個函示，主要接收各別的$\theta^f_l$及$\theta^b_l$擴張係數，藉由這兩個基本函式映射且產生$\hat{x_l}$及$\hat{y_l}$，示意圖如下，另外其相對應的數學函示如下：
 The operation of the first part of the $l$-th block is described by the following equations:
 $$h_{l,1} = FC_{l,1}(x_l);h_{l,2} = FC_{l,2}(h_{l,1});h_{l,3} = FC_{l,3}(h_{l,2});h_{l,4} = FC_{l,4}(h_{l,3})$$
 $$\theta^b_{l}=LINEAR^b_{l}(h_l,4);\theta^f_{l}=LINEAR^f_{l}(h_l,4)$$
@@ -22,12 +22,15 @@ Here LINEAT layer is simply a linear projection layer, i.e. $\theta^f_l=W^f_lh_{
 The second part of the network maps expansion coefficients $\theta^f_l$ and $\theta^b_l$ to outputs via basic layers, $\hat{y_l} = g^f_l(\theta^f_l)$ and $\theta{x_l} = g^b_l(\theta^b_l)$.Its operation is describle by the following equations:
 $$\hat{y_l} = \sum^{dim(\theta^f_l)}_{i=1} \theta^f_{l,i}v^f_i\  , \hat{x_l} = \sum^{dim(\theta^b_l)}_{i=1} \theta^b_{l,i}v^b_i$$
 Here $v_i^f$ and $v^b_i$ are forecast and backcast basis vectors, $\theta^f_{l,1}$ is the $i$-th element of $\theta^f_l$. The function of $g^b_l$ and $g^f_l$ is to provide sufficiently risk set $\{v_i^f\}^{dim(\theta^f_l)}_{i=1}$ and $\{v_i^b\}^{dim(\theta^b_l)}_{i=1}$ such that their respective outputs can be represented adequately via varying expansion coefficients $\theta^f_l$ and $\theta^b_l$.
+
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_2.png?raw=true)
 ### Doubly Residual Stacking
 在過去深度學習方式是較難提供模型結果的解釋，故作者提供新穎方法「hierarchical doubly resuidualtopology」，此方法會有兩個殘差值，一個為backcast prediction 與 forecast prediction，其數學公式如下：
 Its operation is describle by the following equations:
 $$x_l = x_{l-1}-\hat{x}_{l-1}\  , \hat(y)=\sum_l\hat{y}_l$$
 
 由上可以知道第一個block的輸入值近似於$x$ i.e $x_1 \equiv x$, 另外剩餘的block，所學習的對象是減掉前一個輸出值$\hat{x}_{l-1}$，這樣的機制是會讓下游的block比較好進行預測的任務。更重要的事，每個block會預測出部分$\hat{y}_l$，並在stack層進行聚集，此機制是很好提供階層分解，讓最後的預估的$\hat{y}$是所得部分的$\hat{y}_l$合併。最後我們可以透過隨機$g^b_l$與$g^f_l$，讓梯度更加的的透明，作者也強制將$g^b_l$與$g^f_l$共享給stack中的任一個block，是可以讓模型有解釋的重要部分。
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_3.png?raw=true)
 ### Interpretablily
 接著針對模型解釋我們提供兩個架構，一個基本的通用的DL，另外一個為明確的歸納偏差進行進行解釋，如下：
 #### Generic architecture
@@ -36,3 +39,9 @@ In this case the outputs of block $l$ are described as :
 $$\hat{y}_l=V^f_l\theta^f_l\  , \hat{x}_l=V^b_l\theta^b_l + b^b_l$$
 我們可以透過$V^f_l$學習部分預測$\hat{y}_l$的預測分解，其維度為$H \times dim(\theta^f_l)$，其中第一分解矩陣維度可以表示離散時間指標，第一分解矩陣維度可以表示基本函式的指標，換句話說，可以將$V^f_l$視為時間上波形，但是無法強迫學習時間上的特徵，沒有固有的型態，在實驗中沒有特別明顯，故無法成為任何解釋。
 #### Interpretable architecture 
+此方式可以透過在Stack level增加架構到基本layer層，此外對於時間序列的領域來說，我們要解釋這個序列，通常會將其分解成趨勢(Trend)及季節性(Seasonality)，故作者使用這個概念到模型中，讓我們Stack層的輸出更有解釋性，若要在Stack具有解釋性，則不會採用generic model，而是下列Trend跟Seasonality的model，說明如下：
+
+**Trend model**
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_4.png?raw=true)
+**Seasonality model**
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_5.png?raw=true)
