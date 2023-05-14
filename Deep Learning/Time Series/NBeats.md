@@ -30,7 +30,7 @@ Its operation is describle by the following equations:
 $$x_l = x_{l-1}-\hat{x}_{l-1}\  , \hat(y)=\sum_l\hat{y}_l$$
 
 由上可以知道第一個block的輸入值近似於$x$ i.e $x_1 \equiv x$, 另外剩餘的block，所學習的對象是減掉前一個輸出值$\hat{x}_{l-1}$，這樣的機制是會讓下游的block比較好進行預測的任務。更重要的事，每個block會預測出部分$\hat{y}_l$，並在stack層進行聚集，此機制是很好提供階層分解，讓最後的預估的$\hat{y}$是所得部分的$\hat{y}_l$合併。最後我們可以透過隨機$g^b_l$與$g^f_l$，讓梯度更加的的透明，作者也強制將$g^b_l$與$g^f_l$共享給stack中的任一個block，是可以讓模型有解釋的重要部分。
-![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_3.png?raw=true)
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_3.png?raw=truex)
 ### Interpretablily
 接著針對模型解釋我們提供兩個架構，一個基本的通用的DL，另外一個為明確的歸納偏差進行進行解釋，如下：
 #### Generic architecture
@@ -42,6 +42,25 @@ $$\hat{y}_l=V^f_l\theta^f_l\  , \hat{x}_l=V^b_l\theta^b_l + b^b_l$$
 此方式可以透過在Stack level增加架構到基本layer層，此外對於時間序列的領域來說，我們要解釋這個序列，通常會將其分解成趨勢(Trend)及季節性(Seasonality)，故作者使用這個概念到模型中，讓我們Stack層的輸出更有解釋性，若要在Stack具有解釋性，則不會採用generic model，而是下列Trend跟Seasonality的model，說明如下：
 
 **Trend model**
+時間趨勢是在時間序列中最典型的特徵，主要是monotonic function或者是a slowly varying function。為了要模擬這個趨勢，故作者建議下列的數學公式:
+we propose to constrain $g^b_{s,l}$ and $g^f_{s,l}$ to be a polynomial of small degree $p$, a function slowly varying across forecast window:
+$$\hat{y}_{s,l}=\sum^p_{i=0}\theta^f_{s,l,i}t^i$$
+Here time vector $t = [0,1,2, ... , H-2, H-1]/H$ is defined on a discrete grid running from 0 to $\frac{H-1}{H}$, forecasting $H$ steps ahead. Alternatively the trend forecast in matrix from will then be:
+$$\hat{t}^{tr}_{s,l} = T\theta^f_{s,l}$$
+where $\theta^f_{s,l}$ are polynomial coefficients predicted by a FC network of layer $l$ of stack $s$ described by equations. and $T = [1, t, ..., t^p]$ is matrix of powers of $t$. If $p$ is low, e.g. 2 or 3. it forces $\hat{y}^{tr}_{s,l}$ to mimic trend.
 ![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_4.png?raw=true)
+
 **Seasonality model**
+另外一個季節性的趨勢也是蠻典型的特徵，是屬於常規、週期性、常發生波動，因次作者建議下列數學公式:
+we propose to constrain $g^b_{s,l}$ and $g^f_{s,l}$ to belong to the class of periodic functions, i.e $y_t = y_{t-\triangle}$, where $\triangle$ is a seasonality period. A natural choice for the basis to model periodic fucniton is the Fourier series:
+$$\hat{y}_{s,l} = \sum^{[H/2-1]}_{t=0}\theta^f_{s,l,i}\cos(2\pi it)+\theta^f_{s,l,i+{H/2}}\sin(2 \pi it)$$
+The seasonality forecast will then have the matrix form as follows:
+$$\hat{y}_{s,l}^{seas} = S \theta^f_{s,l}$$
+where $\theta^{f}_{s,l}$ are Fourier coefficients predicted by a FC network of layer $l$ of stack $s$ described by equations. and $S=[1, \cos(2\pi t), ..., \cos(2 \pi [H/2-1]t, \sin(2 \pi t), ..., \sin( 2 \pi [H/2-1]t))]$ is the matrix of sinusoidal waveforms. The forecast $\hat{y}^{seas}_{s,l}$ is then a periodic function mimicking typical seasonal patterns
 ![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_5.png?raw=true)
+
+最後說明一下如何使用這兩個可解釋架構，主要會將趨勢性及季節性放在各別的Stack，首先會先經過趨勢性的Stack，再經過季節性的Stack，透過雙重殘差方式疊加，會有幾個重要的特性:
+1. 在進入季節性的stack之前，可透過趨勢性的stack將輸入$x$的趨勢性進行移除。
+2. 部分的趨勢性及季節性可以能夠個別解釋預測情況
+
+最後從結構來看，每一個stock是由殘差連接的不同block所組成的，每個block都可以共享各自的不可以學習的$g^b_{s,l}$與$g^f_{s,l}$，若趨勢性及季節性的block為3時，發現在共享$g^b_{s,l}$與$g^f_{s,l}$為基礎，在不同的block共享所有的權重，是可以或的較好驗證表現。
