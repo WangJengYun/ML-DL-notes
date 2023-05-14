@@ -65,3 +65,15 @@ where $\theta^{f}_{s,l}$ are Fourier coefficients predicted by a FC network of l
 
 最後從結構來看，每一個stock是由殘差連接的不同block所組成的，每個block都可以共享各自的不可以學習的$g^b_{s,l}$與$g^f_{s,l}$，若趨勢性及季節性的block為3時，發現在共享$g^b_{s,l}$與$g^f_{s,l}$為基礎，在不同的block共享所有的權重，是可以或的較好驗證表現。
 
+### Ensembling 
+最後作者採用Ensembling方式，將不同的實驗進行聚合，如下:
+1. 不同模型去配似三種的評估指標，如 sMAPE、MASE及MAPE
+2. 採用不同的window size 進行訓練，如$2H,3H, ..., 7H$，共有6種window size
+3. 不同初始化的模型進行訓練
+
+以上共有180種的模型結果，進行中位數的聚合，得到最終預測值，相關的效度，可以參考下列圖表，其中N-BEATS-G表示通用結構; N-BEATS-I 表示可解釋的結構; N-BEATS-I+G 表示聚合通用結構及解釋的結構，可以發現在M4的資料集上，N-BEATS-I+G 表現相對比較好。
+
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_6.png?raw=true)
+### Experimental Result
+
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_7.png?raw=true)
