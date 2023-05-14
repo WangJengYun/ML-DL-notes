@@ -64,3 +64,4 @@ where $\theta^{f}_{s,l}$ are Fourier coefficients predicted by a FC network of l
 2. 部分的趨勢性及季節性可以能夠個別解釋預測情況
 
 最後從結構來看，每一個stock是由殘差連接的不同block所組成的，每個block都可以共享各自的不可以學習的$g^b_{s,l}$與$g^f_{s,l}$，若趨勢性及季節性的block為3時，發現在共享$g^b_{s,l}$與$g^f_{s,l}$為基礎，在不同的block共享所有的權重，是可以或的較好驗證表現。
+
