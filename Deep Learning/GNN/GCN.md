@@ -1,10 +1,13 @@
+---
+tags : GNN
+---
+Graph Convolutional Network(GCN)
+===
 在說明GCN之前我們先來談談傅立葉轉換(Fourier Transform)，傅立葉轉換主要是將由時域轉到頻域的技巧，且通過一個濾波器後，再透過傅立葉反轉換，將頻域訊號轉回時域，透過轉換及反轉可以協助分解不同頻譜並解析，目前可以運用到不同的領域上，如下：
 1. 把整首歌曲分成成千上萬個小部分，再從中截去不重要的頻率，留下重要的頻率，最後被耳朵聽到的音軌裡只剩下那些被留下來的最重要的頻率（音調）。這樣處理過後，檔案容量通常只要原本的十分之一，而我們也很難分辨壓縮後的音頻和原始音頻的區別。
 2. 主動降噪耳機同樣也使用傅立葉轉換：耳機裡內建的麥克風可記錄你周圍環境的噪音，並在所有頻譜裡測量噪音的頻率，之後這些噪音的頻率會被反轉，然後混合到你的聲音內容裡頭，這樣能抵消你身邊嬰兒的哭聲或公路上的噪音。降噪的原理是「反相」而非「反向」，利用波在週期內部的對稱性，製造出一個振幅相同，但相位相反的波動，實現相互的抵消。聲波本質是機械振動，而且人耳的聽力範圍也有限（20Hz~20KHz），在此頻率範圍中，無論透過耳機還是音響，產生降噪所需的波動，進而讓波動相消。
 
 初步了解傅立葉轉換，基於頻譜的GCN不在是時域資訊，而是圖訊號(如圖一)，透過圖訊號轉出，可以了解每個節點所到資訊，也是與時域的訊號相同(如圖二)，若是低頻表示固定距離內的節點，訊號差距較小，高頻則反之。簡單來說，頻率越高與鄰居節點的訊號差距愈大(如圖三)。
-
-
 
 ## 基礎圖概念
 A graph can be defined as $G = (V,E,A)$, where $V$ is the set of vertices or nodes, $E$ is set of edges or links, and $A$ is the adjacency matrix of size $n \times n$, $v_{i} \in V$ denotes a node, and $e_{ij} \in E$ denotes an edge connecting $v_i$ and $v_j$ in a graph $G$. If an edge $e_{ij}$ in graph, denoted by $e_{ij} \in E$, then $A_{ij}>0$, otherwise $A_{i,j}=0$ and $e_{i,j} \notin E$
@@ -19,6 +22,7 @@ Undirected graph is graph with undirected edges and has $A_{i,j} = A_{j,i}$. In 
 
 ## 拉普拉斯矩陣(Laplacian matrix)
 有了基本概念，接下來說明拉普拉斯矩陣，此數學理論為譜圖理論中的核心與基本概念，在機器學習及深度學習有蠻重要的應用，尤其是圖學技術方面。
+
 Weight on the graph is associated numerical value assigned to each edge of a graph. A weighted graph is graph associated with a weight to each of its edges while an unweighted graph is one without weights on its edge. The Laplacian maxtrix(unnormalized Laplacian or combinatorial Laplacian) for an unweighted graph is 
 $$L=D-A \in \mathbb{R}^{n \times n}$$
 Analogously, weighted graph is 
@@ -141,3 +145,86 @@ $$f = \hat{f}(\lambda_1)u_1+\hat{f}(\lambda_2)u_2+...+\hat{f}(\lambda_n)u_n = \s
 where $u_i$ is the column  vector of orthogonal matrix from spectral decompostion from $L=U \Lambda U^T$
 In fact, that is analogous to the principle of Discrete Fourier Transform(DFT)
 $$X_{2\pi}(k) = \sum_{x = \infty}^\infty x_ne^{-ikn}$$
+### Spectral graph convolution 
+In the Fourier domain, the convolution operator on graph $\cdot G$ is defined as 
+$$g(\cdot G)=F^{-1}(F(g)\odot F(f))=U(U^Tg\odot U^Tf)=Ug_{\theta}(\Lambda)U^Tf=g_{\theta}(L)f$$
+where ($\cdot G$) is convolution operator defined on graph, $\odot$ is Hadamard prodoct.It follows that a signal $f$ is filter by $g \in \mathbb{R}^n$, and denoted $g_{\theta}(\Lambda)=diag(U^Tg)$ which the diagonal corresponds to spectral filter coefficients.
+
+For details,
+$$
+\begin{aligned}
+g_{\theta}(\cdot G) f &= g_{\theta}(L) f  = g_{\theta}(U\Lambda U^T) f = Ug_{\theta}(\Lambda)U^T f \\
+&=U
+    \begin{bmatrix}
+    \hat{g}(\lambda_1) & & & \\
+    & \hat{g}(\lambda_2) & & \\
+    & & \ddots & \\
+    & & & \hat{g}(\lambda_n)\\
+    \end{bmatrix}U^T f \\
+&= U
+    \begin{bmatrix}
+    \hat{g}(\lambda_1) & & & \\
+    & \hat{g}(\lambda_2) & & \\
+    & & \ddots & \\
+    & & & \hat{g}(\lambda_n)\\
+    \end{bmatrix}\hat{f} \\
+&= U
+    \begin{bmatrix}
+    \hat{g}(\lambda_1) & & & \\
+    & \hat{g}(\lambda_2) & & \\
+    & & \ddots & \\
+    & & & \hat{g}(\lambda_n)\\
+    \end{bmatrix}
+    \begin{bmatrix}
+    \hat{f}(\lambda_1) \\
+    \hat{f}(\lambda_2) \\
+    \cdots \\
+    \hat{f}(\lambda_n) \\
+     \end{bmatrix} \\
+&= U
+    \begin{bmatrix}
+    \hat{g}(\lambda_1) \\
+    \hat{g}(\lambda_2) \\
+    \cdots \\
+    \hat{g}(\lambda_n) \\
+     \end{bmatrix}
+    \odot
+    \begin{bmatrix}
+    \hat{f}(\lambda_1) \\
+    \hat{f}(\lambda_2) \\
+    \cdots \\
+    \hat{f}(\lambda_n) \\
+     \end{bmatrix}
+\end{aligned}
+$$
+Spectal-basd GCN all follow this definition of $U g_{\theta}(\Lambda)U^Tf$. the main diference between different version of Spectral-based GCN lies in the choice of the filter $g_{\theta}(\Lambda)$
+
+上述推論，是引入傅立葉轉換方法，在$f$經過Graph filter 進行卷積的到結果，接這我們要來探討不同的Graph filter則會有不同的效果及計算量．
+#### Spectral CNN 
+Bruna et al. propose the first spectral convolutional neural network. A graph can be associated with node signal $f \in \mathbb{R}_{n \times C_k}$ is a feature matrix with $f_i \in \mathbb{R}_{C_k}$ representing the feature vector of node $i$. A construnction where each layer $k=1,...,K$ transforms an input vector $f^{(k)}$ of size $n \times C_k$ into an output $f^{(k+1)}$ of size $n \times C_{k+1}$
+$$f_j^{(k+1)}=\sigma(U\sum^{C_k}_{i=1}g_{\theta_{i,j}}^{(k)}U^Tf_i^{(k)})=\sigma(U\sum^{C_k}_{i=1}g_{\theta_{i,j}}^{(k)}U^T\hat{f}_i^{(k)}) $$
+where $g_{\theta_{i,j}}^{(k)},i=1,...,m;j=1,...,C_k$ is a diagonal matrix with trainable parameters $\theta^{(k)}_m,m\in (1,n)$, $\sigma$ is activation function. $g_{\theta_{i,j}}^{(k)}$ is given by 
+$$g_{\theta_{i,j}}^{(k)} =
+\begin{bmatrix}
+\theta_1^{(k)} & & & \\
+ & \theta_2^{(k)}& & \\
+ & & \ddots& \\
+ & & & \theta_n^{(k)}\\
+\end{bmatrix} 
+$$
+上述公式是為第一代GCN設計，主要是在graph filter設計有$n$個$\theta$參數進行訓練，但會導致計算量會龐大，每一次向前傳播會都需要計算$U,diag(\theta)$及$U^T$三者的矩陣相乘，會是有$O(n^3)$計算複雜度．
+#### ChebNet
+ChebNet uses Chebyshev polynomials instead of convolutions in spectral domain Furthermore, it was demostrated that $g_{\theta}(\Lambda)$ can be approximated by a truncated expansion in terms of Chebyshev polynomials 
+$$T_{n+1}(x) = 2xT_n(x)-T_{n-1}(x), n \in \mathbb{N}^+$$
+where $T_0(x)=1,T_1(x) = 1$ Here, we make $\tilde{\Lambda} = \frac{2\Lambda}{\lambda_{max}}-I\in[-1,1]$,$\lambda_{max}$ is the biggest eigenvalue from $L$
+$$g_{\theta}(\Lambda)= \sum^{K-1}_{k=0}\theta_kT_k(\tilde{\Lambda})$$
+where the parameter $\theta \in \mathbb{R}^K$, $T_k(\tilde{\Lambda}) \in \mathbb{R}^{n \times n}$. The filtering operator can also the written as 
+$$g_{\theta}(L)= \sum^{K-1}_{k=0}\theta_kT_k(\tilde{L})$$
+where $T_k(\tilde{L})\in \mathbb{R}^{n \times n}$ is the Chebyshev polinomial of order $k$ evaluated at the scaled Laplacian $\tilde{L} = 2L/\lambda_{max}-I_n$. Accordingly, spectral filters represented by $K^{th}$-order polynomials of the Laplacian are exactly $K$-localized i.e. it depends only on nodes that are at maximum $K$ steps away from the central node.
+##### 比較Spectral CNN 與 CheNet
+* Spectral CNN的參數複雜度相對較高，計算複雜度$O(n)$，且較容易overfit，若處理大規模圖資料，則面臨較大的挑戰．
+* 計算Laplace的矩陣分解也是非常好計算量
+* ChebNet 只有$K$個可訓練參數$\theta_k$，而且$K<<n$，因此複雜度為$O(K)$，複雜度是可以減少的
+* ChebNet是不需要進行Laplace的矩陣分解，而是估計$g_{\theta}(L)$，相關也不需要較高計算量．
+
+### GCN 
