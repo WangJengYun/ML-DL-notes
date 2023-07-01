@@ -75,5 +75,5 @@ where $\theta^{f}_{s,l}$ are Fourier coefficients predicted by a FC network of l
 
 ![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_6.png?raw=true)
 ### Experimental Result
-
+由實驗可以知道解釋性的N-BEATS相對比通用性更容易將序列資訊萃取出來。
 ![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/Time%20Series/NBeats/NBeats_7.png?raw=true)
