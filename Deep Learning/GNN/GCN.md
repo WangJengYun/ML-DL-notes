@@ -278,3 +278,4 @@ we then can use Stochastic Gradient descent as optimizer to finish the process o
 1. 在做卷積層處理，可以參考下方，將鄰近的節點資訊進行聚集，進而可以針對下游任務的學習，如節點分類
 ![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_7.png?raw=true)
 2. 回到半監督任務上，上述說明圖卷積的架構，在現在半監督的任務中，作者期望透過已知的數據$X$和鄰近矩陣$A$來訓練圖卷積神經網絡$f(X,A)$，認為鄰近矩陣$A$包含一些$X$中美有隱含的圖結構資訊，可利用這些資訊進行推論，如下圖表示，輸入$C$維度特徵及輸出$F$維度特徵，中間有若干的隱藏層，$X$為訓練數據及$Y$為標籤，右圖是使用兩層$GCN$在Cora數據上，且僅用5%2的標註所得到的可視化結果。
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_10.png?raw=true)
