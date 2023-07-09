@@ -7,8 +7,15 @@ Graph Convolutional Network(GCN)
 1. 把整首歌曲分成成千上萬個小部分，再從中截去不重要的頻率，留下重要的頻率，最後被耳朵聽到的音軌裡只剩下那些被留下來的最重要的頻率（音調）。這樣處理過後，檔案容量通常只要原本的十分之一，而我們也很難分辨壓縮後的音頻和原始音頻的區別。
 2. 主動降噪耳機同樣也使用傅立葉轉換：耳機裡內建的麥克風可記錄你周圍環境的噪音，並在所有頻譜裡測量噪音的頻率，之後這些噪音的頻率會被反轉，然後混合到你的聲音內容裡頭，這樣能抵消你身邊嬰兒的哭聲或公路上的噪音。降噪的原理是「反相」而非「反向」，利用波在週期內部的對稱性，製造出一個振幅相同，但相位相反的波動，實現相互的抵消。聲波本質是機械振動，而且人耳的聽力範圍也有限（20Hz~20KHz），在此頻率範圍中，無論透過耳機還是音響，產生降噪所需的波動，進而讓波動相消。
 
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_5.jpg?raw=true)
 初步了解傅立葉轉換，基於頻譜的GCN不在是時域資訊，而是圖訊號(如圖一)，透過圖訊號轉出，可以了解每個節點所到資訊，也是與時域的訊號相同(如圖二)，若是低頻表示固定距離內的節點，訊號差距較小，高頻則反之。簡單來說，頻率越高與鄰居節點的訊號差距愈大(如圖三)。
 
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_1.jpg?raw=true)
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_4.jpg?raw=true)
+
+## GNN初步概念
+過去Convolution概念是應用到影像，但研究逐漸看看圖資料是否可以借用，如下圖，假設有$N$個節點及$C$個特徵，在Convolution layer 是不會減少node個數，背後是由$x * g = U\hat{g}U^Tx = \hat{g}(L)x$進行convolutional filters，之後我們會進行介紹，另外在pooling layer 是選擇任意圖聚合演算法，聚合特定點的附近節點資訊，且保留區域的圖架構．
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_6.png?raw=true)
 ## 基礎圖概念
 A graph can be defined as $G = (V,E,A)$, where $V$ is the set of vertices or nodes, $E$ is set of edges or links, and $A$ is the adjacency matrix of size $n \times n$, $v_{i} \in V$ denotes a node, and $e_{ij} \in E$ denotes an edge connecting $v_i$ and $v_j$ in a graph $G$. If an edge $e_{ij}$ in graph, denoted by $e_{ij} \in E$, then $A_{ij}>0$, otherwise $A_{i,j}=0$ and $e_{i,j} \notin E$
 
@@ -28,6 +35,7 @@ $$L=D-A \in \mathbb{R}^{n \times n}$$
 Analogously, weighted graph is 
 $$L=D-W \in \mathbb{R}^{n \times n}$$
 where $W$ is weighted adjacent matrix
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_8.png?raw=true)
 ### Eigen Decompostion
 it also known as spectral decompostion, is a method to decompose a matrix into a product of matrics involving its eigenvalues and eigenvectors. Assuming base of $\mathbb{L}$ is $U = (\overline{u}_1,\overline{u}_2,...,\overline{u}_n),\overline{u}_i \in \mathbb{R}, i = 1,2,...,n$.Considering the Laplacian matrix is real symmetric, the spectral matrix, the spactral decompostion of Laplacian matrix is 
 $$L = U \Lambda U^{-1} = U \Lambda U^{T}$$
@@ -62,6 +70,7 @@ $$\bigtriangledown_{i,j}=\begin{cases} \bigtriangledown_{i,j}=-1 & \text{if }v_j
 \bigtriangledown_{i,j}=0 & \text{if }v_j\text{ is not in }e_i
 \end{cases}
 $$
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_9.png?raw=true)
 The mapping $f \to \bigtriangledown f$ is known as the co-boundary mapping of the graph, we take an example from the graph as follewing, we arrange arbitrary directions to the edges as the figure in right shows. We have
 $$\bigtriangledown = 
 \begin{bmatrix}
@@ -133,7 +142,8 @@ $$Y=LX=DX-AX$$
 對單一節點來說，式中的$AX$可以視為本次操作(每單位時間)鄰居預計要從我身上拿走的訊息量。 $DX$可以視為是本次操作每個節點尚未進行傳播前，本來擁有的訊息量，即是上次操作(上一個單位時間)每個頂點從它的鄰居頂點取得的訊息量。兩者相減，就是本次操作後訊息傳播的狀況，接著會更近一步說明GCN是如何運用Laplacian Matrix數學理論。
 
 ## Spectral graph convolution
-在真實世界中，通常每個node都會擁有自己的特徵或屬性，在圖的架構中，我們可以視為圖訊號，可進一步獲取圖相關資訊(如關聯資訊及屬性資訊)，一個圖訊號可以由圖$G = \{V,E\}$所構成的，且可以透過映射函式$f$，來映射節點到數ㄓ值，可以表達為$f:V \rightarrow \mathbb{R}^d$，其中$d$表示與每個節點所關聯數值的維度。接這圖訊號可以透過譜域去解釋，基於graph Fourier transform將圖訊號轉換到不同空間，我並透過Graph Filters進行相關操作，並透過反函式轉換成原始空間，相關操作可以參考下方，
+在真實世界中，通常每個node都會擁有自己的特徵或屬性，在圖的架構中，我們可以視為圖訊號，可進一步獲取圖相關資訊(如關聯資訊及屬性資訊)，一個圖訊號可以由圖$G = \{V,E\}$所構成的，且可以透過映射函式$f$，來映射節點到數ㄓ值，可以表達為$f:V \rightarrow \mathbb{R}^d$，其中$d$表示與每個節點所關聯數值的維度。接這圖訊號可以透過譜域去解釋，基於graph Fourier transform將圖訊號轉換到不同空間，我並透過Graph Filters進行相關操作，並透過反函式轉換成原始空間，相關操作可以參考下方。
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_3.jpg?raw=true)
 ### Graph Fourier transform
 Graph Fourier transform is analogous to classical Fourier transform, similarly, the eigenvalues could represent graph frequencies and form spectrum of the graph, the eigenvectors denote frequency components which serve the work as the graph Fourier basis.
 Let graph Fourier basis $U = (u_1, u_2, ..., u_n), u_i \in \mathbb{R},i=1,2,...,n$ from Laplacian matrix $L$. Node's singal $f = (f_1, f_2, f_3,...,f_n)^T$, after graph Fourier Transform, signal become $\hat(f)=(\hat{f}(\lambda_1),\hat{f}(\lambda_2),\hat{f}(\lambda_3),...,\hat{f}(\lambda_n))^T$, the graph inverse Fourier tansform is 
@@ -228,3 +238,43 @@ where $T_k(\tilde{L})\in \mathbb{R}^{n \times n}$ is the Chebyshev polinomial of
 * ChebNet是不需要進行Laplace的矩陣分解，而是估計$g_{\theta}(L)$，相關也不需要較高計算量．
 
 ### GCN 
+GCN can be regarded as a further simplification of ChebNet. To reduce the computational complexity, only the first order Chebyshev polynomials are considered, consequently each convolution kernel has only one trainable parameter,we have 
+$$g_\theta(\Lambda)=\sum^1_{k=0}\theta_kT_l(\tilde{\Lambda})$$ 
+$$
+g_{\theta}(\Lambda)=
+    \begin{bmatrix}
+    g_\theta(\Lambda)=\sum^1_{k=0}\theta_kT_l(\tilde{\lambda_1}) & & & \\
+    & g_\theta(\Lambda)=\sum^1_{k=0}\theta_kT_l(\tilde{\lambda_2}) & & \\
+    & & \ddots & \\
+    & & & g_\theta(\Lambda)=\sum^1_{k=0}\theta_kT_l(\tilde{\lambda_n})\\
+    \end{bmatrix} \\
+$$ 
+In this linear formulation of a GCN we further approximate $\lambda_{max} \approx 2$. Under such approximations, this can simplifies to :
+$$\tilde{L} = \frac{2}{\lambda_{max}}L-I_n=L-I_n$$
+where $L$ is normalized graph Laplacian $L-I-D^{-\frac{1}{2}}AD^{-\frac{1}{2}}$.
+Then, 
+$$f(._G) = \sum^1_{k=0}\theta_kT_k{\tilde{L}}=\theta_0T_0(\tilde{L})f=\theta_1T_1(\tilde{L})f$$
+where $A$ is an adjacency matrix of the graph.
+Furthermore, to reduce the number of trainable parameters---each kernel has only one trainable parameter, we set $\theta_0=-\theta_1=\theta$, then we have
+$$f(.G)g \approx (\theta_0 + \theta_1(L-I_n))f = \theta_0 - \theta_1 D^{-\frac{1}{2}}AD^{-\frac{1}{2}}=(\theta(D^{-\frac{1}{2}}AD^{-\frac{1}{2}}+I_n))f$$ 
+where $D^{-\frac{1}{2}}AD^{-\frac{1}{2}}+I_n$ now has eigenvalues in the range $[0,2]$. Then, only one parameter in convolution kernel can be learned. The number of parameter is greatly reduced, which can reduce the number of parameter to prevent overfitting.
+However, repeated application of this opertator can therefore lead to numerical instabilities and exploding or vanishing gradients. To alleviate this problem, the following re-normalization trick is introduced.
+We add self-loop to $A$
+$$\tilde{A} = A + I_n$$
+Correspondingly, 
+$$\tilde{D}_{i,i}=\sum^n_{j=1}\tilde{A}_{i,j}$$
+Finally,
+$$f(._G)g = \theta \tilde{D}^{-\frac{1}{2}} \tilde{A} \tilde{D}^{-\frac{1}{2}}f$$
+Usually, we write $\theta$ as $W$, $\hat{A} = \tilde{D}^{-\frac{1}{2}} \tilde{A} \tilde{D}^{-\frac{1}{2}}$, then we have $f(._G)g=\hat{A}fW$.
+Here make an illustraction of example, consider a two-layer GCN for semi-supervised node classification on a graph, $f \in \mathbb{R}^{n \times C}$ is $n$ nodes with $C$ input channels,
+$$Z = softmax(\hat{A}ReLU(\hat{A}fW^{<0>})W^{<1>})$$
+$W^{<0>} \in \mathbb{R}^{C \times H}$ is an input-to-hidden weight matrix for a hidden layer with $H$ feature maps. $W^{<1>} \in \mathbb{R}^{H \times F}$ is a hidden-to-output weight matrix, $F$ is the dimension of feature maps in the output layer. 
+For calculation of loss function, need to evaluate the cross-entropy error over all labled examples
+$$Loss = - \sum_{l \in \gamma_L}\sum^F_{f=1}Y_{l,f}ln Z_{l,f}$$
+where $\gamma_L$ is the set node indices that have labels, labels are denoted by $Y_i$,
+we then can use Stochastic Gradient descent as optimizer to finish the process of training. 
+### Summary
+
+1. 在做卷積層處理，可以參考下方，將鄰近的節點資訊進行聚集，進而可以針對下游任務的學習，如節點分類
+![](https://github.com/WangJengYun/ML-DL-notes/blob/master/Deep%20Learning/image/GNN/GCN/GCN_7.png?raw=true)
+2. 回到半監督任務上，上述說明圖卷積的架構，在現在半監督的任務中，作者期望透過已知的數據$X$和鄰近矩陣$A$來訓練圖卷積神經網絡$f(X,A)$，認為鄰近矩陣$A$包含一些$X$中美有隱含的圖結構資訊，可利用這些資訊進行推論，如下圖表示，輸入$C$維度特徵及輸出$F$維度特徵，中間有若干的隱藏層，$X$為訓練數據及$Y$為標籤，右圖是使用兩層$GCN$在Cora數據上，且僅用5%2的標註所得到的可視化結果。
